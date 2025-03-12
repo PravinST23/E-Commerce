@@ -15,6 +15,8 @@ const db = firebase.firestore();
 let currentUser = null;
 let currentOrder = null;
 let allProducts = [];
+let currentPage = 1;
+const productsPerPage = 8;
 let brands = new Set();
 let supercoinsAvailable = 0;
 let supercoinsUsed = 0;
@@ -32,15 +34,15 @@ function closePopup() {
 
 function showSection(sectionId) {
   // Hide all sections and remove 'active' class
-  document.querySelectorAll('.section').forEach(section => {
-      section.classList.add('hidden');
+  document.querySelectorAll('.section, .hero-section').forEach(section => {
+    //   section.classList.add('hidden');
       section.classList.remove('active');
   });
 
   // Show the selected section
   let selectedSection = document.getElementById(sectionId);
   if (selectedSection) {
-      selectedSection.classList.remove('hidden');
+    //   selectedSection.classList.remove('hidden');
       selectedSection.classList.add('active');
   } else {
       console.error("Section not found: " + sectionId);
@@ -49,9 +51,7 @@ function showSection(sectionId) {
 
   // Load content based on section using switch-case
   switch (sectionId) {
-      case 'home':
-          loadHomeProducts(); // Only load home products when "home" is clicked
-          break;
+      
       case 'products':
           loadProducts('all');
           break;
@@ -67,6 +67,7 @@ function showSection(sectionId) {
       case 'orders':
           loadOrders();
           break;
+      
       default:
           console.warn("No specific function for this section.");
           break;
@@ -81,7 +82,7 @@ document.getElementById('registerForm').addEventListener('submit', e => {
   e.preventDefault();
   const email = document.getElementById('regEmail').value;
   const password = document.getElementById('regPassword').value;
-  if (email === 'yages@store.com') {
+  if (email === 'pravin@gmail.com') {
       document.getElementById('regMessage').innerText = "This email is reserved for admin!";
       return;
   }
@@ -145,10 +146,10 @@ document.getElementById('adminLoginForm').addEventListener('submit', e => {
       .then(() => {
           document.getElementById('adminLoginMessage').innerText = "Admin login successful!";
           showPopup("Success", "Admin login successful!");
-          setTimeout(() => {
-              closePopup();
-              window.location.href = 'admin.html';
-          }, 2000);
+          window.location.href = 'admin.html'; // Redirect only after successful login
+          // setTimeout(() => {
+          //     closePopup();
+          // }, ); // Syntax error here
       })
       .catch(err => document.getElementById('adminLoginMessage').innerText = err.message);
 });
@@ -191,123 +192,140 @@ function loadSupercoins() {
 }
 
 function loadHomeProducts() {
-  const homeProductsDiv = document.getElementById('homeProducts');
-  homeProductsDiv.innerHTML = "Loading products...";
-  db.collection('products').where('isActive', '==', true).get()
-      .then(snapshot => {
-          homeProductsDiv.innerHTML = "";
-          snapshot.forEach(doc => {
-              const prod = { id: doc.id, ...doc.data() };
-              const imageUrl = prod.imageURLs && prod.imageURLs.length > 0 ? prod.imageURLs[0] : 'assets/images/nothing.png';
-              const prodDiv = document.createElement('div');
-              prodDiv.classList.add('product-card');
-              const priceSymbol = prod.currency === 'INR' ? '₹' : '$';
-              prodDiv.innerHTML = `
-                  <div class="product-image" style="background-image: url('${imageUrl}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'">
-                      <div class="quick-view">Quick View</div>
-                  </div>
-                  <div class="product-info">
-                      <h3 class="product-name">${prod.name}</h3>
-                      <p>Brand: ${prod.brand}</p>
-                      <p>Price: ${priceSymbol}${prod.price}</p>
-                      ${prod.discountPrice ? `<p>Discount: ${priceSymbol}${prod.discountPrice}</p>` : ''}
-                      <p>Availability: ${prod.availability}</p>
-                      <button onclick="addToCart('${prod.id}', '${prod.name}')">Add to Cart</button>
-                      <button onclick="addToWishlist('${prod.id}', '${prod.name}')">Add to Wishlist</button>
-                  </div>
-              `;
-              homeProductsDiv.appendChild(prodDiv);
-          });
-      })
-      .catch(err => {
-          console.error("Error loading home products:", err);
-          homeProductsDiv.innerHTML = "Error loading products.";
-      });
+    const homeProductsDiv = document.getElementById('homeProducts');
+    homeProductsDiv.innerHTML = "Loading products...";
+    db.collection('products').where('isActive', '==', true).get()
+        .then(snapshot => {
+            homeProductsDiv.innerHTML = "";
+            snapshot.forEach(doc => {
+                const prod = { id: doc.id, ...doc.data() };
+                const imageUrl = prod.imageURLs && prod.imageURLs.length > 0 ? prod.imageURLs[0] : 'assets/images/nothing.png';
+                const prodDiv = document.createElement('div');
+                prodDiv.classList.add('product-card');
+                const priceSymbol = prod.currency === 'INR' ? '₹' : '$';
+                prodDiv.innerHTML = `
+                    <div class="product-images" style="background-image: url('${imageUrl}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'">
+                        <div class="quick-view">Quick View</div>
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-name">${prod.name}</h3>
+                        <p>Brand: ${prod.brand}</p>
+                        <p>Price: ${priceSymbol}${prod.price}</p>
+                        ${prod.discountPrice ? `<p>Discount: ${priceSymbol}${prod.discountPrice}</p>` : ''}
+                        <p>Availability: ${prod.availability}</p>
+                    </div>
+                    <div class="menu-icons">
+                        <div class="wishlist-icon" onclick="addToWishlist('${prod.id}', '${prod.name}')"><i class="fas fa-heart"></i></div>
+                        <div class="cart-icon" onclick="addToCart('${prod.id}', '${prod.name}')"><i class="fas fa-cart-plus"></i></div>
+                    </div>
+                `;
+                homeProductsDiv.appendChild(prodDiv);
+            });
+        })
+        .catch(err => {
+            console.error("Error loading home products:", err);
+            homeProductsDiv.innerHTML = "Error loading products.";
+        });
+  }
+
+  function loadProducts(category) {
+    const productsListDiv = document.getElementById('productsList');
+    productsListDiv.innerHTML = `Loading ${category === 'all' ? 'all' : category} products...`;
+    let query = db.collection('products').where('isActive', '==', true);
+    if (category !== 'all') query = query.where('category', '==', category);
+
+    query.get()
+        .then(snapshot => {
+            allProducts = [];
+            brands.clear();
+            document.getElementById('filterBrand').innerHTML = '<option value="all">All Brands</option>';
+            snapshot.forEach(doc => {
+                const prod = { id: doc.id, ...doc.data() };
+                allProducts.push(prod);
+                brands.add(prod.brand);
+            });
+            brands.forEach(brand => {
+                const option = document.createElement('option');
+                option.value = brand;
+                option.text = brand;
+                document.getElementById('filterBrand').appendChild(option);
+            });
+            applyFilters();
+        })
+        .catch(err => {
+            console.error("Error loading products:", err);
+            productsListDiv.innerHTML = "Error loading products.";
+        });
 }
 
-function loadProducts(category) {
-  const productsListDiv = document.getElementById('productsList');
-  productsListDiv.innerHTML = `Loading ${category === 'all' ? 'all' : category} products...`;
-  let query = db.collection('products').where('isActive', '==', true);
-  if (category !== 'all') query = query.where('category', '==', category);
+function applyFilters(searchTerm = '') {
+    const productsListDiv = document.getElementById('productsList');
+    const filterAvailability = document.getElementById('filterAvailability').value;
+    const sortBy = document.getElementById('sortBy').value;
+    const filterBrand = document.getElementById('filterBrand').value;
 
-  query.get()
-      .then(snapshot => {
-          allProducts = [];
-          brands.clear();
-          document.getElementById('filterBrand').innerHTML = '<option value="all">All Brands</option>';
-          snapshot.forEach(doc => {
-              const prod = { id: doc.id, ...doc.data() };
-              allProducts.push(prod);
-              brands.add(prod.brand);
-          });
-          brands.forEach(brand => {
-              const option = document.createElement('option');
-              option.value = brand;
-              option.text = brand;
-              document.getElementById('filterBrand').appendChild(option);
-          });
-          applyFilters();
-      })
-      .catch(err => {
-          console.error("Error loading products:", err);
-          productsListDiv.innerHTML = "Error loading products.";
-      });
+    let filteredProducts = [...allProducts];
+
+    // Apply search filter
+    if (searchTerm) {
+        filteredProducts = filteredProducts.filter(prod => 
+            prod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            prod.brand.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+
+    if (filterAvailability === 'inStock') {
+        filteredProducts = filteredProducts.filter(prod => prod.availability > 0);
+    } else if (filterAvailability === 'outOfStock') {
+        filteredProducts = filteredProducts.filter(prod => prod.availability <= 0);
+    }
+
+    if (filterBrand !== 'all') {
+        filteredProducts = filteredProducts.filter(prod => prod.brand === filterBrand);
+    }
+
+    filteredProducts.sort((a, b) => {
+        if (sortBy === 'nameAsc') return a.name.localeCompare(b.name);
+        if (sortBy === 'nameDesc') return b.name.localeCompare(a.name);
+        if (sortBy === 'priceAsc') return (a.discountPrice || a.price) - (b.discountPrice || b.price);
+        if (sortBy === 'priceDesc') return (b.discountPrice || b.price) - (a.discountPrice || a.price);
+        return 0;
+    });
+
+    productsListDiv.innerHTML = "";
+    if (filteredProducts.length === 0) {
+        productsListDiv.innerHTML = "No products match your criteria.";
+        return;
+    }
+
+    filteredProducts.forEach(prod => {
+        const imageUrl = prod.imageURLs && prod.imageURLs.length > 0 ? prod.imageURLs[0] : 'assets/images/nothing.png';
+        const prodDiv = document.createElement('div');
+        prodDiv.classList.add('product-card');
+        const priceSymbol = prod.currency === 'INR' ? '₹' : '$';
+        prodDiv.innerHTML = `
+            <div class="product-image" style="background-image: url('${imageUrl}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'">
+                <div class="quick-view">Quick View</div>
+            </div>
+            <div class="product-info">
+                <h3 class="product-name">${prod.name}</h3>
+                <p>Brand: ${prod.brand}</p>
+                <p>Price: ${priceSymbol}${prod.price}</p>
+                ${prod.discountPrice ? `<p>Discount: ${priceSymbol}${prod.discountPrice}</p>` : ''}
+                <p>Availability: ${prod.availability}</p>
+            </div>
+            <div class="menu-icons">
+                <div class="wishlist-icon" onclick="addToWishlist('${prod.id}', '${prod.name}')"><i class="fas fa-heart"></i></div>
+                <div class="cart-icon" onclick="addToCart('${prod.id}', '${prod.name}')"><i class="fas fa-cart-plus"></i></div>
+            </div>
+        `;
+        productsListDiv.appendChild(prodDiv);
+    });
 }
 
-function applyFilters() {
-  const productsListDiv = document.getElementById('productsList');
-  const filterAvailability = document.getElementById('filterAvailability').value;
-  const sortBy = document.getElementById('sortBy').value;
-  const filterBrand = document.getElementById('filterBrand').value;
-
-  let filteredProducts = [...allProducts];
-
-  if (filterAvailability === 'inStock') {
-      filteredProducts = filteredProducts.filter(prod => prod.availability > 0);
-  } else if (filterAvailability === 'outOfStock') {
-      filteredProducts = filteredProducts.filter(prod => prod.availability <= 0);
-  }
-
-  if (filterBrand !== 'all') {
-      filteredProducts = filteredProducts.filter(prod => prod.brand === filterBrand);
-  }
-
-  filteredProducts.sort((a, b) => {
-      if (sortBy === 'nameAsc') return a.name.localeCompare(b.name);
-      if (sortBy === 'nameDesc') return b.name.localeCompare(a.name);
-      if (sortBy === 'priceAsc') return (a.discountPrice || a.price) - (b.discountPrice || b.price);
-      if (sortBy === 'priceDesc') return (b.discountPrice || b.price) - (a.discountPrice || a.price);
-      return 0;
-  });
-
-  productsListDiv.innerHTML = "";
-  if (filteredProducts.length === 0) {
-      productsListDiv.innerHTML = "No products match your filters.";
-      return;
-  }
-
-  filteredProducts.forEach(prod => {
-      const imageUrl = prod.imageURLs && prod.imageURLs.length > 0 ? prod.imageURLs[0] : 'assets/images/nothing.png';
-      const prodDiv = document.createElement('div');
-      prodDiv.classList.add('product-card');
-      const priceSymbol = prod.currency === 'INR' ? '₹' : '$';
-      prodDiv.innerHTML = `
-          <div class="product-image" style="background-image: url('${imageUrl}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'">
-              <div class="quick-view">Quick View</div>
-          </div>
-          <div class="product-info">
-              <h3 class="product-name">${prod.name}</h3>
-              <p>Brand: ${prod.brand}</p>
-              <p>Price: ${priceSymbol}${prod.price}</p>
-              ${prod.discountPrice ? `<p>Discount: ${priceSymbol}${prod.discountPrice}</p>` : ''}
-              <p>Availability: ${prod.availability}</p>
-              <button onclick="addToCart('${prod.id}', '${prod.name}')">Add to Cart</button>
-              <button onclick="addToWishlist('${prod.id}', '${prod.name}')">Add to Wishlist</button>
-          </div>
-      `;
-      productsListDiv.appendChild(prodDiv);
-  });
+function searchProducts() {
+    const searchTerm = document.getElementById('productSearch').value;
+    applyFilters(searchTerm);
 }
 
 function addToCart(productId, name) {
@@ -370,45 +388,47 @@ function addToCart(productId, name) {
 }
 
 function loadCart() {
-  if (!currentUser) {
-      showPopup("Error", "Please login first!");
-      setTimeout(closePopup, 2000);
-      return;
+    if (!currentUser) {
+        showPopup("Error", "Please login first!");
+        setTimeout(closePopup, 2000);
+        return;
+    }
+    const cartListDiv = document.getElementById('cartList');
+    cartListDiv.innerHTML = "";
+    db.collection('users').doc(currentUser.uid).collection('cart').get()
+        .then(snapshot => {
+            if (snapshot.empty) {
+                cartListDiv.innerHTML = "Your cart is empty.";
+                return;
+            }
+            snapshot.forEach(doc => {
+                const item = doc.data();
+                const totalPrice = item.price * item.quantity;
+                const priceSymbol = item.currency === 'INR' ? '₹' : '$';
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('product-card');
+                itemDiv.innerHTML = `
+                    <div class="product-image" style="background-image: url('${item.imageUrl || 'assets/images/nothing.png'}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'"></div>
+                    <div class="product-info">
+                        <h3 class="product-name">${item.name} x${item.quantity}</h3>
+                        <p>Brand: ${item.brand}</p>
+                        <p>Price: ${priceSymbol}${item.price}</p>
+                        ${item.discountPrice ? `<p>Discount: ${priceSymbol}${item.discountPrice}</p>` : ''}
+                        <p>Total: ${priceSymbol}${totalPrice}</p>
+                        <p>Availability: ${item.availability}</p>
+                        <div class="quantity-controls">
+                            <button onclick="updateCartQuantity('${doc.id}', ${item.quantity + 1}, '${item.productId}')">+</button>
+                            <button onclick="updateCartQuantity('${doc.id}', ${item.quantity - 1}, '${item.productId}')">-</button>
+                            <button onclick="deleteCartItem('${doc.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+                cartListDiv.appendChild(itemDiv);
+            });
+            updateCartCount();
+        })
+        .catch(err => console.error(err));
   }
-  const cartListDiv = document.getElementById('cartList');
-  cartListDiv.innerHTML = "";
-  db.collection('users').doc(currentUser.uid).collection('cart').get()
-      .then(snapshot => {
-          if (snapshot.empty) {
-              cartListDiv.innerHTML = "Your cart is empty.";
-              return;
-          }
-          snapshot.forEach(doc => {
-              const item = doc.data();
-              const totalPrice = item.price * item.quantity;
-              const priceSymbol = item.currency === 'INR' ? '₹' : '$';
-              const itemDiv = document.createElement('div');
-              itemDiv.classList.add('product-card');
-              itemDiv.innerHTML = `
-                  <div class="product-image" style="background-image: url('${item.imageUrl || 'assets/images/nothing.png'}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'"></div>
-                  <div class="product-info">
-                      <h3 class="product-name">${item.name} x${item.quantity}</h3>
-                      <p>Brand: ${item.brand}</p>
-                      <p>Price: ${priceSymbol}${item.price}</p>
-                      ${item.discountPrice ? `<p>Discount: ${priceSymbol}${item.discountPrice}</p>` : ''}
-                      <p>Total: ${priceSymbol}${totalPrice}</p>
-                      <p>Availability: ${item.availability}</p>
-                      <button onclick="updateCartQuantity('${doc.id}', ${item.quantity + 1}, '${item.productId}')">+</button>
-                      <button onclick="updateCartQuantity('${doc.id}', ${item.quantity - 1}, '${item.productId}')">-</button>
-                      <button onclick="deleteCartItem('${doc.id}')">Delete</button>
-                  </div>
-              `;
-              cartListDiv.appendChild(itemDiv);
-          });
-          updateCartCount();
-      })
-      .catch(err => console.error(err));
-}
 
 function updateCartQuantity(docId, newQuantity, productId) {
   const cartRef = db.collection('users').doc(currentUser.uid).collection('cart').doc(docId);
@@ -489,36 +509,83 @@ function addToWishlist(productId, name) {
 }
 
 function loadWishlist() {
-  if (!currentUser) {
-      showPopup("Error", "Please login first!");
-      setTimeout(closePopup, 2000);
-      return;
+    if (!currentUser) {
+        showPopup("Error", "Please login first!");
+        setTimeout(closePopup, 2000);
+        return;
+    }
+  
+    const wishlistListDiv = document.getElementById('wishlistList');
+    wishlistListDiv.innerHTML = "Loading wishlist...";
+  
+    // Use onSnapshot for live updates
+    const unsubscribe = db.collection('wishlist')
+        .where("userId", "==", currentUser.uid)
+        .onSnapshot(snapshot => {
+            wishlistListDiv.innerHTML = ""; // Clear the list before rendering
+            if (snapshot.empty) {
+                wishlistListDiv.innerHTML = "Your wishlist is empty.";
+                return;
+            }
+  
+            snapshot.forEach(doc => {
+                const item = doc.data();
+                const itemId = doc.id; // Get the document ID for removal
+                const priceSymbol = item.currency === 'INR' ? '₹' : '$';
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('product-card');
+  
+                // Make the entire card clickable to navigate to the product page
+                itemDiv.style.cursor = 'pointer';
+                itemDiv.onclick = (e) => {
+                    // Prevent navigation if the remove icon is clicked
+                    if (e.target.classList.contains('remove-icon') || e.target.closest('.remove-icon')) {
+                        return;
+                    }
+                    // Navigate to the product page (adjust the URL structure as needed)
+                    window.location.href = `product.html?id=${item.productId}`;
+                };
+  
+                itemDiv.innerHTML = `
+                    <div class="product-image" style="background-image: url('${item.imageUrl || 'assets/images/nothing.png'}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'">
+                        <div class="quick-view">Quick View</div>
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-name">${item.name}</h3> <!-- Removed quantity -->
+                        <p>Brand: ${item.brand}</p>
+                        <p>Price: ${priceSymbol}${item.price}</p>
+                        ${item.discountPrice ? `<p>Discount: ${priceSymbol}${item.discountPrice}</p>` : ''}
+                        <p>Availability: ${item.availability}</p>
+                        <div class="remove-icon" onclick="removeFromWishlist('${itemId}', event)">
+                            <i class="fas fa-trash-alt"></i>
+                        </div>
+                    </div>
+                `;
+                wishlistListDiv.appendChild(itemDiv);
+            });
+        }, err => {
+            console.error("Error loading wishlist:", err);
+            wishlistListDiv.innerHTML = "Error loading wishlist.";
+        });
+  
+    // Return the unsubscribe function to stop listening when needed (optional)
+    return unsubscribe;
   }
-  const wishlistListDiv = document.getElementById('wishlistList');
-  wishlistListDiv.innerHTML = "";
-  db.collection('wishlist').where("userId", "==", currentUser.uid).get()
-      .then(snapshot => {
-          if (snapshot.empty) wishlistListDiv.innerHTML = "Your wishlist is empty.";
-          snapshot.forEach(doc => {
-              const item = doc.data();
-              const priceSymbol = item.currency === 'INR' ? '₹' : '$';
-              const itemDiv = document.createElement('div');
-              itemDiv.classList.add('product-card');
-              itemDiv.innerHTML = `
-                  <div class="product-image" style="background-image: url('${item.imageUrl || 'assets/images/nothing.png'}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'"></div>
-                  <div class="product-info">
-                      <h3 class="product-name">${item.name} x${item.quantity}</h3>
-                      <p>Brand: ${item.brand}</p>
-                      <p>Price: ${priceSymbol}${item.price}</p>
-                      ${item.discountPrice ? `<p>Discount: ${priceSymbol}${item.discountPrice}</p>` : ''}
-                      <p>Availability: ${item.availability}</p>
-                  </div>
-              `;
-              wishlistListDiv.appendChild(itemDiv);
-          });
-      })
-      .catch(err => console.error(err));
-}
+  
+  // Function to remove an item from the wishlist
+  function removeFromWishlist(itemId, event) {
+    event.stopPropagation(); // Prevent the card click event from triggering navigation
+    db.collection('wishlist').doc(itemId).delete()
+        .then(() => {
+            showPopup("Success", "Item removed from wishlist.");
+            setTimeout(closePopup, 2000);
+        })
+        .catch(err => {
+            console.error("Error removing item from wishlist:", err);
+            showPopup("Error", "Failed to remove item from wishlist.");
+            setTimeout(closePopup, 2000);
+        });
+  }
 
 function placeOrder() {
   if (!currentUser) {
@@ -795,88 +862,357 @@ function closePaymentModal() {
 
 function loadHistory() {
   if (!currentUser) {
-      showPopup("Error", "Please login first!");
-      setTimeout(closePopup, 2000);
-      return;
+    showPopup("Error", "Please login first!");
+    setTimeout(closePopup, 2000);
+    return;
   }
+  
   const historyListDiv = document.getElementById('historyList');
   historyListDiv.innerHTML = "";
+  
   db.collection('orders').where("userId", "==", currentUser.uid).get()
-      .then(snapshot => {
-          if (snapshot.empty) historyListDiv.innerHTML = "No orders yet.";
-          snapshot.forEach(doc => {
-              const order = doc.data();
-              const orderDiv = document.createElement('div');
-              orderDiv.classList.add('product-card');
-              const orderDate = order.orderDate.toDate().toLocaleString();
-              let itemsHtml = '';
-              order.items.forEach(item => {
-                  const priceSymbol = item.currency === 'INR' ? '₹' : '$';
-                  itemsHtml += `
-                      <div class="product-image" style="background-image: url('${item.imageUrl || 'assets/images/nothing.png'}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'"></div>
-                      <p>${item.name} x${item.quantity}</p>
-                      <p>Brand: ${item.brand}</p>
-                      <p>Price: ${priceSymbol}${item.price}</p>
-                      ${item.discountPrice ? `<p>Discount: ${priceSymbol}${item.discountPrice}</p>` : ''}
-                      <p>Availability: ${item.availability}</p>
-                  `;
-              });
-              orderDiv.innerHTML = `
-                  <div class="product-info">
-                      <h3 class="product-name">Order on ${orderDate}</h3>
-                      ${itemsHtml}
-                      <div class="product-price">Total: $${order.totalAmountUSD.toFixed(2)} - ${order.paymentStatus}</div>
-                  </div>
-              `;
-              historyListDiv.appendChild(orderDiv);
-          });
-      })
-      .catch(err => console.error(err));
+    .then(snapshot => {
+      if (snapshot.empty) {
+        historyListDiv.innerHTML = '<div class="empty-state">No orders yet.</div>';
+        return;
+      }
+      
+      snapshot.forEach(doc => {
+        const order = doc.data();
+        const orderDate = order.orderDate.toDate().toLocaleString();
+        const orderContainer = document.createElement('div');
+        orderContainer.classList.add('orders-container');
+        
+        // Create individual order cards for each item
+        order.items.forEach(item => {
+          const orderCard = document.createElement('div');
+          orderCard.classList.add('order-card');
+          
+          const priceSymbol = item.currency === 'INR' ? '₹' : '$';
+          const discountText = item.discountPrice ? 
+            `<p class="discount">Discount: ${priceSymbol}${item.discountPrice}</p>` : '';
+          
+          orderCard.innerHTML = `
+            <div class="order-header">
+              <h3>Order on ${orderDate}</h3>
+            </div>
+            <div class="order-content">
+              <div class="product-images">
+                ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : ''}
+              </div>
+              <div class="product-details">
+                <h4>${item.name} x${item.quantity}</h4>
+                <p class="brand">Brand: ${item.brand}</p>
+                <p class="price">Price: ${priceSymbol}${item.price}</p>
+                ${discountText}
+                <p class="availability">Availability: ${item.availability}</p>
+              </div>
+            </div>
+          `;
+          
+          orderContainer.appendChild(orderCard);
+        });
+        
+        // Add order summary section
+        const orderSummary = document.createElement('div');
+        orderSummary.classList.add('order-summary');
+        orderSummary.innerHTML = `
+          <p class="total">Total: $${order.totalAmountUSD.toFixed(2)}</p>
+          <p class="status ${order.paymentStatus.toLowerCase()}">${order.paymentStatus}</p>
+        `;
+        
+        orderContainer.appendChild(orderSummary);
+        historyListDiv.appendChild(orderContainer);
+      });
+    })
+    .catch(err => {
+      console.error("Error loading order history:", err);
+      historyListDiv.innerHTML = '<div class="error-state">Error loading orders. Please try again.</div>';
+    });
 }
 
 function loadOrders() {
   if (!currentUser) {
-      showPopup("Error", "Please login first!");
-      setTimeout(closePopup, 2000);
-      return;
+    showPopup("Error", "Please login first!");
+    setTimeout(closePopup, 2000);
+    return;
   }
+  
   const ordersListDiv = document.getElementById('ordersList');
-  ordersListDiv.innerHTML = "";
-  db.collection('orders').where("userId", "==", currentUser.uid).get()
-      .then(snapshot => {
-          if (snapshot.empty) ordersListDiv.innerHTML = "No orders yet.";
-          snapshot.forEach(doc => {
-              const order = doc.data();
-              const orderDiv = document.createElement('div');
-              orderDiv.classList.add('product-card');
-              const orderDate = order.orderDate.toDate().toLocaleString();
-              let itemsHtml = '';
-              order.items.forEach(item => {
-                  const priceSymbol = item.currency === 'INR' ? '₹' : '$';
-                  itemsHtml += `
-                      <p>${item.name} x${item.quantity}</p>
-                      <p>Brand: ${item.brand}</p>
-                      <p>Price: ${priceSymbol}${item.price}</p>
-                      ${item.discountPrice ? `<p>Discount: ${priceSymbol}${item.discountPrice}</p>` : ''}
-                      <p>Availability: ${item.availability}</p>
-                  `;
-              });
-              const status = order.status === 'ordered' ? 'Ordered' :
-                          order.status === 'shipped' ? 'Shipped' :
-                          order.status === 'out_for_delivery' ? 'Out for Delivery' :
-                          order.status === 'delivered' ? 'Delivered' : order.status;
-              orderDiv.innerHTML = `
-                  <div class="product-image" style="background-image: url('${order.items[0].imageUrl || 'assets/images/nothing.png'}');" onerror="this.style.backgroundImage='url(assets/images/nothing.png)'"></div>
-                  <div class="product-info">
-                      <h3 class="product-name">Order on ${orderDate}</h3>
-                      ${itemsHtml}
-                      <div class="product-price">Status: ${status}</div>
-                  </div>
-              `;
-              ordersListDiv.appendChild(orderDiv);
+  ordersListDiv.innerHTML = '<div class="loading">Loading your orders...</div>';
+  
+  db.collection('orders').where("userId", "==", currentUser.uid)
+    .orderBy("orderDate", "desc") // Show newest orders first
+    .get()
+    .then(snapshot => {
+      if (snapshot.empty) {
+        ordersListDiv.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <p>You haven't placed any orders yet.</p>
+            <a href="#shop" class="btn-shop">Start Shopping</a>
+          </div>`;
+        return;
+      }
+      
+      ordersListDiv.innerHTML = '';
+      snapshot.forEach(doc => {
+        const order = doc.data();
+        const orderDiv = document.createElement('div');
+        orderDiv.classList.add('order-card');
+        
+        const orderDate = order.orderDate.toDate().toLocaleString();
+        const status = order.status === 'ordered' ? 'Ordered' :
+                      order.status === 'shipped' ? 'Shipped' :
+                      order.status === 'out_for_delivery' ? 'Out for Delivery' :
+                      order.status === 'delivered' ? 'Delivered' : order.status;
+        
+        // Calculate order summary
+        let itemCount = 0;
+        order.items.forEach(item => itemCount += item.quantity);
+        
+        // Create order header
+        let orderHeader = `
+          <div class="order-header">
+            <div class="order-id">
+              <span class="label">Order ID:</span> 
+              <span class="value">${doc.id.slice(-8).toUpperCase()}</span>
+            </div>
+            <div class="order-date">
+              <span class="label">Placed on:</span> 
+              <span class="value">${orderDate}</span>
+            </div>
+            <div class="order-status status-${order.status || 'ordered'}">
+              ${status}
+            </div>
+          </div>`;
+        
+        // Create items preview
+        let itemsPreview = `<div class="order-items-preview">`;
+        
+        // Show up to 3 item images as preview
+        const previewItems = order.items.slice(0, 3);
+        previewItems.forEach(item => {
+          itemsPreview += `
+            <div class="item-preview" style="background-image: url('${item.imageUrl || 'assets/images/nothing.png'}');" 
+                onerror="this.style.backgroundImage='url(assets/images/nothing.png)'"></div>`;
+        });
+        
+        // Add indicator if there are more items
+        if (order.items.length > 3) {
+          itemsPreview += `<div class="item-preview more">+${order.items.length - 3}</div>`;
+        }
+        
+        itemsPreview += `</div>`;
+        
+        // Create order summary
+        let orderSummary = `
+          <div class="order-summary">
+            <div class="item-count">${itemCount} ${itemCount === 1 ? 'item' : 'items'}</div>
+            <div class="order-total">${formatPrice(order.totalAmountUSD, 'USD')}</div>
+          </div>`;
+        
+        // Create order actions
+        let orderActions = `
+          <div class="order-actions">
+            <button class="btn-details" onclick="showOrderDetails('${doc.id}')">
+              <i class="fas fa-eye"></i> View Details
+            </button>
+            <button class="btn-track" onclick="trackOrder('${doc.id}')">
+              <i class="fas fa-truck"></i> Track Order
+            </button>
+          </div>`;
+        
+        // Add order progress indicator for non-delivered orders
+        let orderProgress = '';
+        if (order.status !== 'delivered') {
+          const progressSteps = ['ordered', 'shipped', 'out_for_delivery', 'delivered'];
+          const currentStepIndex = progressSteps.indexOf(order.status || 'ordered');
+          
+          orderProgress = `<div class="order-progress">`;
+          
+          progressSteps.forEach((step, index) => {
+            const isCompleted = index <= currentStepIndex;
+            const isCurrent = index === currentStepIndex;
+            
+            orderProgress += `
+              <div class="progress-step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}">
+                <div class="step-dot"></div>
+                <div class="step-label">${step.charAt(0).toUpperCase() + step.slice(1).replace(/_/g, ' ')}</div>
+              </div>`;
+            
+            // Add connector line between steps
+            if (index < progressSteps.length - 1) {
+              orderProgress += `<div class="step-connector ${isCompleted ? 'completed' : ''}"></div>`;
+            }
           });
-      })
-      .catch(err => console.error(err));
+          
+          orderProgress += `</div>`;
+        }
+        
+        // Assemble the order card
+        orderDiv.innerHTML = orderHeader + itemsPreview + orderSummary + orderProgress + orderActions;
+        ordersListDiv.appendChild(orderDiv);
+      });
+    })
+    .catch(err => {
+      console.error("Error loading orders:", err);
+      ordersListDiv.innerHTML = `
+        <div class="error-state">
+          <i class="fas fa-exclamation-circle"></i>
+          <p>There was a problem loading your orders.</p>
+          <button onclick="loadOrders()" class="btn-retry">Try Again</button>
+        </div>`;
+    });
+}
+
+// Helper function to format currency
+function formatPrice(amount, currency) {
+  const symbol = currency === 'INR' ? '₹' : '$';
+  return `${symbol}${parseFloat(amount).toFixed(2)}`;
+}
+
+// Function to display order details in a modal
+function showOrderDetails(orderId) {
+  // Create a modal for showing detailed order information
+  const modal = document.createElement('div');
+  modal.classList.add('modal');
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Order Details</h3>
+        <span class="close-modal" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div id="orderDetail" class="loading">Loading order details...</div>
+      </div>
+    </div>`;
+  
+  document.body.appendChild(modal);
+  
+  // Load the order details
+  db.collection('orders').doc(orderId).get()
+    .then(doc => {
+      if (!doc.exists) {
+        document.getElementById('orderDetail').innerHTML = 'Order not found.';
+        return;
+      }
+      
+      const order = doc.data();
+      const orderDate = order.orderDate.toDate().toLocaleString();
+      const status = order.status === 'ordered' ? 'Ordered' :
+                    order.status === 'shipped' ? 'Shipped' :
+                    order.status === 'out_for_delivery' ? 'Out for Delivery' :
+                    order.status === 'delivered' ? 'Delivered' : order.status;
+      
+      let orderDetails = `
+        <div class="order-detail-header">
+          <div>
+            <div class="detail-label">Order ID:</div>
+            <div class="detail-value">${orderId.slice(-8).toUpperCase()}</div>
+          </div>
+          <div>
+            <div class="detail-label">Date:</div>
+            <div class="detail-value">${orderDate}</div>
+          </div>
+          <div>
+            <div class="detail-label">Status:</div>
+            <div class="detail-value status-${order.status || 'ordered'}">${status}</div>
+          </div>
+        </div>
+        
+        <h4>Items</h4>
+        <div class="order-items-detail">`;
+      
+      // Add each item in detail
+      order.items.forEach(item => {
+        const priceSymbol = item.currency === 'INR' ? '₹' : '$';
+        const itemTotal = item.quantity * (item.discountPrice || item.price);
+        
+        orderDetails += `
+          <div class="order-item">
+            <div class="item-image" style="background-image: url('${item.imageUrl || 'assets/images/nothing.png'}');" 
+                onerror="this.style.backgroundImage='url(assets/images/nothing.png)'"></div>
+            <div class="item-details">
+              <div class="item-name">${item.name}</div>
+              <div class="item-meta">
+                <div class="item-brand">Brand: ${item.brand}</div>
+                <div class="item-quantity">Quantity: ${item.quantity}</div>
+              </div>
+              <div class="item-price">
+                ${item.discountPrice ? 
+                  `<div class="original-price">${priceSymbol}${item.price}</div>
+                   <div class="discount-price">${priceSymbol}${item.discountPrice}</div>` : 
+                  `<div>${priceSymbol}${item.price}</div>`}
+              </div>
+              <div class="item-total">
+                Total: ${priceSymbol}${itemTotal.toFixed(2)}
+              </div>
+            </div>
+          </div>`;
+      });
+      
+      orderDetails += `</div>`;
+      
+      // Add shipping address if available
+      if (order.shippingAddress) {
+        orderDetails += `
+          <h4>Shipping Address</h4>
+          <div class="shipping-address">
+            <p>${order.shippingAddress.name || ''}</p>
+            <p>${order.shippingAddress.street || ''}</p>
+            <p>${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''} ${order.shippingAddress.zip || ''}</p>
+            <p>${order.shippingAddress.country || ''}</p>
+          </div>`;
+      }
+      
+      // Add payment information
+      orderDetails += `
+        <h4>Payment Information</h4>
+        <div class="payment-info">
+          <div class="payment-method">
+            <div class="detail-label">Payment Method:</div>
+            <div class="detail-value">${order.paymentMethod || 'Not specified'}</div>
+          </div>
+          <div class="payment-status">
+            <div class="detail-label">Payment Status:</div>
+            <div class="detail-value">${order.paymentStatus || 'Not specified'}</div>
+          </div>
+        </div>
+        
+        <div class="order-summary-detail">
+          <div class="summary-row">
+            <div class="summary-label">Subtotal:</div>
+            <div class="summary-value">${formatPrice(order.subtotalAmountUSD || order.totalAmountUSD, 'USD')}</div>
+          </div>
+          ${order.shippingAmountUSD ? `
+            <div class="summary-row">
+              <div class="summary-label">Shipping:</div>
+              <div class="summary-value">${formatPrice(order.shippingAmountUSD, 'USD')}</div>
+            </div>` : ''}
+          ${order.taxAmountUSD ? `
+            <div class="summary-row">
+              <div class="summary-label">Tax:</div>
+              <div class="summary-value">${formatPrice(order.taxAmountUSD, 'USD')}</div>
+            </div>` : ''}
+          <div class="summary-row total">
+            <div class="summary-label">Total:</div>
+            <div class="summary-value">${formatPrice(order.totalAmountUSD, 'USD')}</div>
+          </div>
+        </div>`;
+      
+      document.getElementById('orderDetail').innerHTML = orderDetails;
+    })
+    .catch(err => {
+      console.error("Error loading order details:", err);
+      document.getElementById('orderDetail').innerHTML = 'Error loading order details. Please try again.';
+    });
+}
+
+// Function to track order (placeholder)
+function trackOrder(orderId) {
+  showPopup("Tracking Information", "Tracking feature coming soon!");
+  setTimeout(closePopup, 3000);
 }
 
 function logout() {
@@ -951,6 +1287,7 @@ auth.onAuthStateChanged(user => {
   }
 });
 
+
 document.addEventListener('DOMContentLoaded', function() {
   const dropdownToggle = document.querySelector('.dropdown-toggle');
   const dropdownMenu = document.querySelector('.dropdown-menu');
@@ -958,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (dropdownToggle && dropdownMenu) {
       dropdownToggle.addEventListener('click', function() {
           dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
-      });
+      }); 
       
       document.addEventListener('click', function(event) {
           if (!event.target.matches('.dropdown-toggle') && !event.target.closest('.dropdown-menu')) {
@@ -967,8 +1304,9 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
+
+
   // Show the home section by default, but don't load products yet
   showSection('home');
   document.getElementById('homeProducts').innerHTML = ""; // Clear any initial content
 });
-
