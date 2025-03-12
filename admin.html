@@ -3,168 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
+    <title>Admin Panel | The Christmas Boutique</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        .analytics-table {
-            width: 50%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        .analytics-table th, .analytics-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        .analytics-table th {
-            background-color: #f2f2f2;
-        }
-        .analytics-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .report-button {
-            margin: 10px 0;
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .report-button:hover {
-            background-color: #45a049;
-        }
-        #orderCategoryList button {
-            margin: 5px;
-            padding: 5px 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        #orderCategoryList button:hover {
-            background-color: #0056b3;
-        }
-        .edit-form {
-            display: none;
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-        }
-    </style>
+    <link rel="stylesheet" href="css/admin-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav>
-        <div class="nav-container">
-            <a href="#" class="logo">Admin</a>
-            <div class="nav-links">
-                <a href="index.html">User Page</a>
-            </div>
-            <div class="nav-actions">
-                <a onclick="logout()" class="nav-button login">Logout</a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="admin-container">
-        <h2 class="section-title">Admin Dashboard</h2>
-
-        <!-- Add Product Form -->
-        <div class="admin-section">
-            <h3>Add New Product</h3>
-            <form id="addProductForm" class="form">
-                <input type="text" id="productName" placeholder="Product Name" required>
-                <input type="number" id="productPrice" placeholder="Price" required>
-                <input type="number" id="productDiscountPrice" placeholder="Discount Price (optional)">
-                <input type="text" id="productBrand" placeholder="Brand" required>
-                <select id="productCategory">
-                    <option value="electronics">Electronics</option>
-                    <option value="fashion">Fashion</option>
-                    <option value="furniture">Furniture</option>
-                    <option value="cosmetics">Cosmetics</option>
-                    <option value="foodAndHealth">Food and Health</option>
-                </select>
-                <input type="number" id="productAvailability" placeholder="Availability" required>
-                <select id="productCurrency">
-                    <option value="USD">USD ($)</option>
-                    <option value="INR">INR (₹)</option>
-                </select>
-                <input type="text" id="productImageURLs" placeholder="Image URLs (comma-separated)">
-                <button type="submit">Add Product</button>
-            </form>
-            <div id="addProductMessage" class="message"></div>
-        </div>
-
-        <!-- Product List -->
-        <div class="admin-section">
-            <h3>Manage Products</h3>
-            <div id="productList" class="products"></div>
-        </div>
-
-        <!-- Order Management -->
-        <div class="admin-section">
-            <h3>Manage Orders</h3>
-            <div id="orderCategoryList">
-                <button onclick="loadOrders('all')">All Orders</button>
-                <button onclick="loadOrders('electronics')">Electronics</button>
-                <button onclick="loadOrders('fashion')">Fashion</button>
-                <button onclick="loadOrders('furniture')">Furniture</button>
-                <button onclick="loadOrders('cosmetics')">Cosmetics</button>
-                <button onclick="loadOrders('foodAndHealth')">Food and Health</button>
-            </div>
-            <div id="orderList" class="products"></div>
-        </div>
-
-        <!-- Analytics Section -->
-        <div class="admin-section">
-            <h3>Analytics</h3>
-            <div id="analytics">
-                <canvas id="salesBarChart" width="400" height="300"></canvas>
-                <canvas id="categoryPieChart" width="400" height="300"></canvas>
-                <canvas id="comparisonChart" width="400" height="300"></canvas>
-                <button class="report-button" onclick="downloadCostEstimationReport()">Download Cost Estimation Report</button>
-                <div id="topProducts" class="products"></div>
-                <div id="bottomProducts" class="products"></div>
-                <div id="inventoryReport" class="products">
-                    <h4>Inventory Report</h4>
-                    <table id="inventoryTable" class="analytics-table">
-                        <thead>
-                            <tr>
-                                <th>S.No</th>
-                                <th>Product Name</th>
-                                <th>Category</th>
-                                <th>Stock</th>
-                                <th>Price (USD)</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    <button class="report-button" onclick="downloadInventoryReport()">Download Inventory Report</button>
-                </div>
-                <div id="customerReport" class="products">
-                    <h4>Customer Report</h4>
-                    <table id="customerTable" class="analytics-table">
-                        <thead>
-                            <tr>
-                                <th>S.No</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Total Orders</th>
-                                <th>Total Spent (USD)</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    <button class="report-button" onclick="downloadCustomerReport()">Download Customer Report</button>
-                </div>
-            </div>
-        </div>
+    <!-- Announcement Bar -->
+    <div class="announcement-bar">
+        <p>FREE SHIPPING ON ORDERS OVER $50</p>
     </div>
+
+    <!-- Header Navigation -->
+    <header class="main-header">
+        <div class="container">
+            <div class="logo">
+                <a href="#">THE CHRISTMAS BOUTIQUE</a>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">SHOP PAGE</a></li>
+                    <li><a href="#" class="active">ADMIN</a></li>
+                    <li><a href="#" onclick="logout()">LOGOUT</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Admin Dashboard -->
+    <main class="admin-dashboard">
+        <div class="container">
+            <h1 class="page-title">ADMIN DASHBOARD</h1>
+            <div class="dashboard-subtitle">
+                <p>Manage your Christmas boutique with ease</p>
+            </div>
+
+            <!-- Add Product Form -->
+            <section class="admin-section">
+                <h2 class="section-title">Add New Product</h2>
+                <div class="form-card">
+                    <form id="addProductForm" class="form">
+                        <div class="form-group">
+                            <input type="text" id="productName" placeholder="Product Name" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <input type="number" id="productPrice" placeholder="Price" required>
+                            </div>
+                            <div class="form-group half">
+                                <input type="number" id="productDiscountPrice" placeholder="Discount Price (optional)">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="productBrand" placeholder="Brand" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <select id="productCategory">
+                                    <option value="electronics">Electronics</option>
+                                    <option value="fashion">Fashion</option>
+                                    <option value="furniture">Furniture</option>
+                                    <option value="cosmetics">Cosmetics</option>
+                                    <option value="foodAndHealth">Food and Health</option>
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <select id="productCurrency">
+                                    <option value="USD">USD ($)</option>
+                                    <option value="INR">INR (₹)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <input type="number" id="productAvailability" placeholder="Availability" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="productImageURLs" placeholder="Image URLs (comma-separated)">
+                        </div>
+                        <button type="submit" class="festive-button">Add Product</button>
+                    </form>
+                    <div id="addProductMessage" class="message"></div>
+                </div>
+            </section>
+
+            <!-- Product List -->
+            <section class="admin-section">
+                <h2 class="section-title">Manage Products</h2>
+                <div id="productList" class="product-grid"></div>
+            </section>
+
+            <!-- Order Management -->
+            <section class="admin-section">
+                <h2 class="section-title">Manage Orders</h2>
+                <div id="orderCategoryList" class="category-filters">
+                    <button onclick="loadOrders('all')" class="category-button active">All Orders</button>
+                    <button onclick="loadOrders('electronics')" class="category-button">Electronics</button>
+                    <button onclick="loadOrders('fashion')" class="category-button">Fashion</button>
+                    <button onclick="loadOrders('furniture')" class="category-button">Furniture</button>
+                    <button onclick="loadOrders('cosmetics')" class="category-button">Cosmetics</button>
+                    <button onclick="loadOrders('foodAndHealth')" class="category-button">Food and Health</button>
+                </div>
+                <div id="orderList" class="order-grid"></div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section class="admin-section">
+                <h2 class="section-title">Analytics</h2>
+                <div id="analytics" class="analytics-container">
+                    <!-- Sales Charts -->
+                    <div class="analytics-card">
+                        <h3 class="card-title">Sales Overview</h3>
+                        <canvas id="salesBarChart" width="400" height="300"></canvas>
+                    </div>
+                    
+                    <div class="analytics-row">
+                        <div class="analytics-card half">
+                            <h3 class="card-title">Category Distribution</h3>
+                            <canvas id="categoryPieChart" width="400" height="300"></canvas>
+                        </div>
+                        <div class="analytics-card half">
+                            <h3 class="card-title">Year Comparison</h3>
+                            <canvas id="comparisonChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3 class="card-title">Cost Estimation</h3>
+                        <button class="report-button" onclick="downloadCostEstimationReport()">Download Cost Estimation Report</button>
+                    </div>
+                    
+                    <!-- Top Products -->
+                    <div class="analytics-card">
+                        <h3 class="card-title">Top Selling Products</h3>
+                        <div id="topProducts" class="analytics-table-container"></div>
+                    </div>
+                    
+                    <!-- Bottom Products -->
+                    <div class="analytics-card">
+                        <h3 class="card-title">Poor Performing Products</h3>
+                        <div id="bottomProducts" class="analytics-table-container"></div>
+                    </div>
+                    
+                    <!-- Inventory Report -->
+                    <div class="analytics-card">
+                        <h3 class="card-title">Inventory Report</h3>
+                        <div id="inventoryReport" class="analytics-table-container">
+                            <table id="inventoryTable" class="analytics-table">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Product Name</th>
+                                        <th>Category</th>
+                                        <th>Stock</th>
+                                        <th>Price (USD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <button class="report-button" onclick="downloadInventoryReport()">Download Inventory Report</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Report -->
+                    <div class="analytics-card">
+                        <h3 class="card-title">Customer Report</h3>
+                        <div id="customerReport" class="analytics-table-container">
+                            <table id="customerTable" class="analytics-table">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Total Orders</th>
+                                        <th>Total Spent (USD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <button class="report-button" onclick="downloadCustomerReport()">Download Customer Report</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>© 2025 The Christmas Boutique - Admin Panel</p>
+        </div>
+    </footer>
 
     <script src="js/admin.js"></script>
 </body>
