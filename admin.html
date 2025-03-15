@@ -9,20 +9,21 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://kit.fontawesome.com/abcdef12345.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="css/admin-style.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Announcement Bar -->
-    <div class="announcement-bar">
+    <div class="announcement-bar festive-accent">
         <p>FREE SHIPPING ON ORDERS OVER $50</p>
     </div>
 
     <!-- Header Navigation -->
-    <header class="main-header">
+    <header class="main-header festive-header">
         <div class="container">
             <div class="logo">
-                <a href="#">THE CHRISTMAS BOUTIQUE</a>
+                <a href="#" class="festive-logo">THE CHRISTMAS BOUTIQUE</a>
             </div>
             <nav class="main-nav">
                 <ul>
@@ -35,17 +36,17 @@
     </header>
 
     <!-- Admin Dashboard -->
-    <main class="admin-dashboard">
+    <main class="admin-dashboard festive-background">
         <div class="container">
-            <h1 class="page-title">ADMIN DASHBOARD</h1>
+            <h1 class="page-title festive-title">ADMIN DASHBOARD</h1>
             <div class="dashboard-subtitle">
                 <p>Manage your Christmas boutique with ease</p>
             </div>
 
             <!-- Add Product Form -->
-            <section class="admin-section">
-                <h2 class="section-title">Add New Product</h2>
-                <div class="form-card">
+            <section class="admin-section festive-section">
+                <h2 class="section-title festive-section-title">Add New Product</h2>
+                <div class="form-card festive-card">
                     <form id="addProductForm" class="form">
                         <div class="form-group">
                             <input type="text" id="productName" placeholder="Product Name" required>
@@ -91,68 +92,76 @@
             </section>
 
             <!-- Product List -->
-            <section class="admin-section">
-                <h2 class="section-title">Manage Products</h2>
+            <section class="admin-section festive-section">
+                <h2 class="section-title festive-section-title">Manage Products</h2>
+                <div class="filters">
+                    <select id="productCategoryFilter" onchange="loadProducts()">
+                        <option value="all">All Categories</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="fashion">Fashion</option>
+                        <option value="furniture">Furniture</option>
+                        <option value="cosmetics">Cosmetics</option>
+                        <option value="foodAndHealth">Food and Health</option>
+                    </select>
+                    <input type="text" id="productSearch" placeholder="Search products..." onkeyup="loadProducts()">
+                </div>
                 <div id="productList" class="product-grid"></div>
+                <div id="productPagination" class="pagination"></div>
             </section>
 
             <!-- Order Management -->
-            <section class="admin-section">
-                <h2 class="section-title">Manage Orders</h2>
-                <div id="orderCategoryList" class="category-filters">
-                    <button onclick="loadOrders('all')" class="category-button active">All Orders</button>
-                    <button onclick="loadOrders('electronics')" class="category-button">Electronics</button>
-                    <button onclick="loadOrders('fashion')" class="category-button">Fashion</button>
-                    <button onclick="loadOrders('furniture')" class="category-button">Furniture</button>
-                    <button onclick="loadOrders('cosmetics')" class="category-button">Cosmetics</button>
-                    <button onclick="loadOrders('foodAndHealth')" class="category-button">Food and Health</button>
+            <section class="admin-section festive-section">
+                <h2 class="section-title festive-section-title">Manage Orders</h2>
+                <div class="filters">
+                    <input type="text" id="orderSearch" placeholder="Search orders..." onkeyup="loadOrders()">
                 </div>
                 <div id="orderList" class="order-grid"></div>
+                <div id="orderPagination" class="pagination"></div>
             </section>
 
             <!-- Analytics Section -->
-            <section class="admin-section">
-                <h2 class="section-title">Analytics</h2>
+            <section class="admin-section festive-section">
+                <h2 class="section-title festive-section-title">Analytics</h2>
                 <div id="analytics" class="analytics-container">
                     <!-- Sales Charts -->
-                    <div class="analytics-card">
-                        <h3 class="card-title">Sales Overview</h3>
+                    <div class="analytics-card festive-card">
+                        <h3 class="card-title festive-card-title">Sales Overview</h3>
                         <canvas id="salesBarChart" width="400" height="300"></canvas>
                     </div>
                     
                     <div class="analytics-row">
-                        <div class="analytics-card half">
-                            <h3 class="card-title">Category Distribution</h3>
+                        <div class="analytics-card half festive-card">
+                            <h3 class="card-title festive-card-title">Category Distribution</h3>
                             <canvas id="categoryPieChart" width="400" height="300"></canvas>
                         </div>
-                        <div class="analytics-card half">
-                            <h3 class="card-title">Year Comparison</h3>
+                        <div class="analytics-card half festive-card">
+                            <h3 class="card-title festive-card-title">Year Comparison</h3>
                             <canvas id="comparisonChart" width="400" height="300"></canvas>
                         </div>
                     </div>
                     
-                    <div class="analytics-card">
-                        <h3 class="card-title">Cost Estimation</h3>
-                        <button class="report-button" onclick="downloadCostEstimationReport()">Download Cost Estimation Report</button>
+                    <div class="analytics-card festive-card">
+                        <h3 class="card-title festive-card-title">Cost Estimation</h3>
+                        <button class="report-button festive-button" onclick="downloadCostEstimationReport()">Download Cost Estimation Report</button>
                     </div>
                     
                     <!-- Top Products -->
-                    <div class="analytics-card">
-                        <h3 class="card-title">Top Selling Products</h3>
+                    <div class="analytics-card festive-card">
+                        <h3 class="card-title festive-card-title">Top Selling Products</h3>
                         <div id="topProducts" class="analytics-table-container"></div>
                     </div>
                     
                     <!-- Bottom Products -->
-                    <div class="analytics-card">
-                        <h3 class="card-title">Poor Performing Products</h3>
+                    <div class="analytics-card festive-card">
+                        <h3 class="card-title festive-card-title">Poor Performing Products</h3>
                         <div id="bottomProducts" class="analytics-table-container"></div>
                     </div>
                     
                     <!-- Inventory Report -->
-                    <div class="analytics-card">
-                        <h3 class="card-title">Inventory Report</h3>
+                    <div class="analytics-card festive-card">
+                        <h3 class="card-title festive-card-title">Inventory Report</h3>
                         <div id="inventoryReport" class="analytics-table-container">
-                            <table id="inventoryTable" class="analytics-table">
+                            <table id="inventoryTable" class="analytics-table festive-table">
                                 <thead>
                                     <tr>
                                         <th>S.No</th>
@@ -164,15 +173,16 @@
                                 </thead>
                                 <tbody></tbody>
                             </table>
-                            <button class="report-button" onclick="downloadInventoryReport()">Download Inventory Report</button>
+                            <div id="inventoryPagination" class="pagination"></div>
+                            <button class="report-button festive-button" onclick="downloadInventoryReport()">Download Inventory Report</button>
                         </div>
                     </div>
                     
                     <!-- Customer Report -->
-                    <div class="analytics-card">
-                        <h3 class="card-title">Customer Report</h3>
+                    <div class="analytics-card festive-card">
+                        <h3 class="card-title festive-card-title">Customer Report</h3>
                         <div id="customerReport" class="analytics-table-container">
-                            <table id="customerTable" class="analytics-table">
+                            <table id="customerTable" class="analytics-table festive-table">
                                 <thead>
                                     <tr>
                                         <th>S.No</th>
@@ -184,7 +194,8 @@
                                 </thead>
                                 <tbody></tbody>
                             </table>
-                            <button class="report-button" onclick="downloadCustomerReport()">Download Customer Report</button>
+                            <div id="customerPagination" class="pagination"></div>
+                            <button class="report-button festive-button" onclick="downloadCustomerReport()">Download Customer Report</button>
                         </div>
                     </div>
                 </div>
@@ -192,11 +203,32 @@
         </div>
     </main>
 
-    <footer class="main-footer">
-        <div class="container">
-            <p>© 2025 The Christmas Boutique - Admin Panel</p>
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3 class="footer-title">Follow us and have a Merry Christmas</h3>
+                <div class="social-icons">
+                    <i class="fa-brands fa-facebook-f"></i>
+                    <i class="fa-brands fa-instagram"></i>
+                    <i class="fa-brands fa-pinterest"></i>
+                </div>
+            </div>
+            <div class="footer-section">
+                <div class="footer-links">
+                    <a href="#">Shipping & Returns</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">FAQ</a>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            © 2025 by The Christmas Boutique.
         </div>
     </footer>
+
+    <!-- Chat Button -->
+    <button class="chat-button festive-button">Let's Chat!</button>
 
     <script src="js/admin.js"></script>
 </body>
